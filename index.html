@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard Absensi</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #0022ff;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    }
+    .filter {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .filter input {
+      padding: 8px;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      flex: 1;
+      min-width: 150px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f2f2f2;
+    }
+    .status {
+      font-weight: bold;
+      padding: 5px 8px;
+      border-radius: 5px;
+    }
+    .tepat {
+      background: #28a745;
+      color: white;
+    }
+    .terlambat {
+      background: #dc3545;
+      color: white;
+    }
+
+    /* Styling form manual */
+    #manualBox {
+      margin: 12px 0 24px;
+      padding: 12px;
+      background: #f7f7f7;
+      border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.05);
+    }
+    #manualBox h3 {
+      margin-top: 0;
+    }
+    #manualForm {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    #manualForm input[type="date"],
+    #manualForm input[type="text"],
+    #manualForm select {
+      padding: 8px;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      flex: 1;
+      min-width: 150px;
+    }
+    #manualForm button {
+      padding: 10px 20px;
+      background: #007bff;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #manualForm button:hover {
+      background: #0056b3;
+    }
+    #manualMsg {
+      margin-top: 8px;
+      color: green;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+
+<header>📋 Dashboard Absensi Kelas X TAV</header>
+
+<div class="container">
+
+  <!-- Form Manual Input -->
+  <div id="manualBox">
+    <h3>Input Manual (Izin / Sakit / Alpha)</h3>
+    <form id="manualForm">
+      <input type="date" id="manualTanggal" required />
+      <input type="text" id="manualNama" placeholder="Nama siswa" required />
+      <select id="manualJenis" required>
+        <option value="">-- Pilih --</option>
+        <option value="Izin">Izin</option>
+        <option value="Sakit">Sakit</option>
+        <option value="Alpha">Alpha</option>
+      </select>
+      <button type="submit">Simpan</button>
+    </form>
+    <div id="manualMsg"></div>
+  </div>
+
+  <!-- Filter Pencarian -->
+  <div class="filter">
+    <input type="date" id="filterTanggal" />
+    <input type="text" id="filterNama" placeholder="Cari nama siswa..." />
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>Waktu</th>
+        <th>Nama</th>
+        <th>Jenis</th>
+        <th>Keterangan</th>
+      </tr>
+    </thead>
+    <tbody id="data-absensi">
+      <tr><td colspan="5">Memuat data...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzXJpBXV50v5WLN5K91xUqUFJmgnu-KneaUyD-0_cxbr4XTduL2Q3KSUEZFqBWxPIzE3w/exec"; // Ganti dengan URL Web App Google Apps Script kamu (tanpa ?action)
+  const scriptURL = "https://script.google.com/macros/s/AKfycbzXJpBXV50v5WLN5K91xUqUFJmgnu-KneaUyD-0_cxbr4XTduL2Q3KSUEZFqBWxPIzE3w/exec?action=getData";
+  let absensiData = [];
+
+  async function loadData() {
+    try {
+      const res = await fetch(scriptURL);
+      absensiData = await res.json();
+      renderTable();
+    } catch (err) {
+      console.error(err);
+      document.getElementById("data-absensi").innerHTML =
+        `<tr><td colspan="5">Gagal memuat data</td></tr>`;
+    }
+  }
+
+  function formatDateGMT8(dateString) {
+    const options = { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Makassar' };
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  }
+
+  function formatTimeGMT8(dateString) {
+    const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Makassar' };
+    return new Date(dateString).toLocaleTimeString('id-ID', options);
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById("data-absensi");
+    tbody.innerHTML = "";
+
+    const filterTanggal = document.getElementById("filterTanggal").value;
+    const filterNama = document.getElementById("filterNama").value.toLowerCase();
+
+    const filteredData = absensiData.filter(row => {
+      const rowTanggalGMT8 = new Date(row.tanggal).toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+      const cocokTanggal = filterTanggal ? rowTanggalGMT8 === filterTanggal : true;
+      const cocokNama = filterNama ? row.nama.toLowerCase().includes(filterNama) : true;
+      return cocokTanggal && cocokNama;
+    });
+
+    if (filteredData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">Tidak ada data</td></tr>`;
+      return;
+    }
+
+    filteredData.forEach(row => {
+      let statusClass = "";
+      if (row.keterangan === "Terlambat") statusClass = "terlambat";
+      if (row.keterangan === "Tepat Waktu") statusClass = "tepat";
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${formatDateGMT8(row.tanggal)}</td>
+          <td>${formatTimeGMT8(row.waktu)}</td>
+          <td>${row.nama.replace(/_/g, " ")}</td>
+          <td>${row.jenis}</td>
+          <td><span class="status ${statusClass}">${row.keterangan || ""}</span></td>
+        </tr>
+      `;
+    });
+  }
+
+  // Event Listener untuk filter
+  document.getElementById("filterTanggal").addEventListener("input", renderTable);
+  document.getElementById("filterNama").addEventListener("input", renderTable);
+
+  // Event Listener untuk form manual input
+  document.getElementById("manualForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const tanggal = document.getElementById("manualTanggal").value;
+    const nama = document.getElementById("manualNama").value.trim();
+    const jenis = document.getElementById("manualJenis").value;
+
+    if (!tanggal || !nama || !jenis) {
+      alert("Lengkapi tanggal, nama, dan jenis.");
+      return;
+    }
+
+    const payload = new URLSearchParams({
+      tanggal: tanggal,
+      waktu: new Date().toTimeString().split(" ")[0],
+      nama: nama,
+      jenis: jenis,
+      keterangan: jenis
+    });
+
+    try {
+      const resp = await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: payload.toString()
+      });
+
+      const text = await resp.text();
+      const manualMsg = document.getElementById("manualMsg");
+      manualMsg.textContent = text;
+      manualMsg.style.color = "green";
+
+      // Refresh data
+      loadData();
+
+      // Reset form
+      e.target.reset();
+
+      setTimeout(() => {
+        manualMsg.textContent = "";
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal mengirim data ke server.");
+    }
+  });
+
+  loadData();
+  setInterval(loadData, 5000); // refresh setiap 5 detik
+</script>
+
+</body>
+</html>
